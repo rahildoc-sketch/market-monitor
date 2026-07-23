@@ -1,9 +1,31 @@
 import requests
+import streamlit as st
 from datetime import datetime
 from models import Announcement
 from database import insert_announcement
 from plyer import notification
 
+
+def send_telegram_alert(message: str):
+    # Safely pull credentials from Streamlit Secrets
+    try:
+        bot_token = st.secrets["TELEGRAM_BOT_TOKEN"]
+        chat_id = st.secrets["TELEGRAM_CHAT_ID"]
+    except Exception as e:
+        print(f"Secrets load error: {e}")
+        return
+
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": message,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": False
+    }
+    try:
+        requests.post(url, json=payload, timeout=5)
+    except Exception as e:
+        print(f"Telegram alert failed: {e}")
 def parse_and_standardize_time(raw_time):
     """Converts varying BSE and NSE time formats into a uniform YYYY-MM-DD HH:MM:SS string."""
     if not raw_time:
@@ -47,6 +69,7 @@ class UnifiedMarketMonitor:
         except: pass
 
     def trigger_alert(self, ann: Announcement):
+        # 1. Desktop Notification handling (cloud-safe)
         try:
             notification.notify(
                 title=f"{ann.exchange}: {ann.symbol} Alert",
@@ -56,6 +79,22 @@ class UnifiedMarketMonitor:
         except Exception:
             pass
 
+        # 2. Telegram Alert Filter (Board Meetings & Results)
+        ann_type = (ann.type or "").lower()
+        keywords = [
+            "financial result", "quarterly result", "annual result", 
+            "audited financial", "results", "board meeting", "outcome of board meeting"
+        ]
+        
+        if any(keyword in ann_type for keyword in keywords):
+            telegram_msg = (
+                f"🚨 <b>{ann.exchange} Announcement</b>\n\n"
+                f"<b>Company:</b> {ann.company} (<code>{ann.symbol}</code>)\n"
+                f"<b>Type:</b> {ann.type}\n"
+                f"<b>Time:</b> {ann.time}\n\n"
+                f"🔗 <a href='{ann.pdf}'>Open PDF Filing</a>"
+            )
+                send_telegram_alert(telegram_msg)
     def fetch_bse(self):
         today = datetime.now().strftime("%Y%m%d")
         url = f"{self.bse_url}?pageno=1&strCat=-1&strPrevDate={today}&strScrip=&strSearch=P&strToDate={today}&strType=C&subcategory=-1"
