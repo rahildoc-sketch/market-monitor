@@ -94,7 +94,7 @@ class UnifiedMarketMonitor:
                 f"<b>Time:</b> {ann.time}\n\n"
                 f"🔗 <a href='{ann.pdf}'>Open PDF Filing</a>"
             )
-                send_telegram_alert(telegram_msg)
+            send_telegram_alert(telegram_msg)
     def fetch_bse(self):
         today = datetime.now().strftime("%Y%m%d")
         url = f"{self.bse_url}?pageno=1&strCat=-1&strPrevDate={today}&strScrip=&strSearch=P&strToDate={today}&strType=C&subcategory=-1"
