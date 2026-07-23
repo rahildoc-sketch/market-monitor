@@ -47,11 +47,14 @@ class UnifiedMarketMonitor:
         except: pass
 
     def trigger_alert(self, ann: Announcement):
-        notification.notify(
-            title=f"{ann.exchange}: {ann.symbol} Alert",
-            message=ann.company,
-            timeout=5
-        )
+        try:
+            notification.notify(
+                title=f"{ann.exchange}: {ann.symbol} Alert",
+                message=ann.company,
+                timeout=5
+            )
+        except Exception:
+            pass
 
     def fetch_bse(self):
         today = datetime.now().strftime("%Y%m%d")
